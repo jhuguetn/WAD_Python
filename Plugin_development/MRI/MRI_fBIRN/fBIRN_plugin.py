@@ -5,8 +5,8 @@
 ####################################
 __author__      = 'Jordi Huguet'  ##
 __dateCreated__ = '20150820'      ##
-#__version__     = '0.1'           ##
-__versionDate__ = '20150820'      ##
+__version__     = '0.1.1'         ##
+__versionDate__ = '20151016'      ##
 ####################################
 
 # - MRI fBIRN Quality Control plugin -
@@ -35,7 +35,7 @@ except ImportError:
 def logTag():
     return "[fBIRN_plugin] "
 
-def runTest(data,results,params):
+def sfnrTest(data,results,params):
     """
     MRI_fBIRN Checks: fBIRN QA
       Signal-to-Fluctuation-Noise Ratio (SFNR)
@@ -44,7 +44,7 @@ def runTest(data,results,params):
     Workflow:
         1. Read image or sequence
         2. Run test
-        3. Build xml output
+        3. Build output
     """
 
     #(1) Reads input file(s) list as a series (scan) single DICOM object
@@ -58,6 +58,7 @@ def runTest(data,results,params):
     #(2)
     seriesDesc = wadwrapper_lib.readDICOMtag("0008,103E",dcmInfile)   # Check Series Description content
     protocolName = wadwrapper_lib.readDICOMtag("0018,1030",dcmInfile) # Check Protocol Name content
+    manufacturer =  wadwrapper_lib.readDICOMtag("0008,0070",dcmInfile) # Check Manufacturer
 
     # Check if is an fBIRN phantom image
     if 'FBIRN' in seriesDesc.upper() and 'FBIRN' in protocolName.upper() :
@@ -65,7 +66,13 @@ def runTest(data,results,params):
         if dicomMode not in ["3D","Enhanced"] :
             raise ValueError("{} Input dataset type not suitable --> 2D dataset or no PixelData found".format(logTag))
 
-        nTemporalPositions = wadwrapper_lib.readDICOMtag("0020,0105",dcmInfile)
+        nTemporalPositions = ''
+
+        if dicomMode is "3D":
+            nTemporalPositions = wadwrapper_lib.readDICOMtag("0020,0105",dcmInfile)
+        elif dicomMode is "Enhanced" and 'PHILIPS' in manufacturer.upper():
+            nSlices = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
+            nTemporalPositions = pixeldataIn.shape[0]/nSlices
 
         if nTemporalPositions is '' :
             raise ValueError("{} Input dataset type not suitable --> no dynamics/temporal positions found".format(logTag))
