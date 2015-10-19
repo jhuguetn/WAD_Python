@@ -72,7 +72,7 @@ def sfnrTest(data,results,params):
             nTemporalPositions = wadwrapper_lib.readDICOMtag("0020,0105",dcmInfile)
         elif dicomMode is "Enhanced" and 'PHILIPS' in manufacturer.upper():
             nSlices = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
-            nTemporalPositions = pixeldataIn.shape[0]/nSlices
+            nTemporalPositions = int(pixeldataIn.shape[0])/int(nSlices)
 
         if nTemporalPositions is '' :
             raise ValueError("{} Input dataset type not suitable --> no dynamics/temporal positions found".format(logTag))
