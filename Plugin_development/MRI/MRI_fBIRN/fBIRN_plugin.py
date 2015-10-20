@@ -17,6 +17,7 @@ __version__ = 20151016
 
 # IMPORT FUNCTIONS
 #import os
+import struct
 import numpy as np
 #import matplotlib
 #if not 'MPLCONFIGDIR' in os.environ:
@@ -67,11 +68,15 @@ def sfnrTest(data,results,params):
             raise ValueError("{} Input dataset type not suitable --> 2D dataset or no PixelData found".format(logTag))
 
         nTemporalPositions = ''
-
+        # Two options and 2 ways of obtaining pixeldata shape: {1} conventional DICOM multi-file scan or (2) enhanced scan file
         if dicomMode is "3D":
             nTemporalPositions = wadwrapper_lib.readDICOMtag("0020,0105",dcmInfile)
         elif dicomMode is "Enhanced" and 'PHILIPS' in manufacturer.upper():
-            nSlices = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
+            # DICOM keeps NumberOfTemporalPositions nested in sequence items/subitems. And DCM4CHEE seems not to keep them at all.
+            # Workaround: Philips Private tag, should be read as a bit string and converted to string/integer/whatever
+            nSlicesRaw = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
+            nSlices = struct.unpack("<L",nSlicesRaw)[0]
+
             nTemporalPositions = int(pixeldataIn.shape[0])/int(nSlices)
 
         if nTemporalPositions is '' :
@@ -84,8 +89,8 @@ def sfnrTest(data,results,params):
             output = fBIRN_lib.fBIRN_SFNR(reshaped_pixeldataIn,plot_data=False)
 
         #(3)
-        results.addFloat('mean_SNR', np.mean(output['imgsnr']), quantity='SNR')
-        results.addFloat('mean_SFNR', output['meansfnr'], quantity='SFNR')
+        results.addFloat('mean_SNR', np.mean(output['imgsnr']), quantity='SNR', level=2) #quantity is actually magnitude in the WAD-QC app
+        results.addFloat('mean_SFNR', output['meansfnr'], quantity='SFNR', level=2) #quantity is actually magnitude in the WAD-QC app
 
         #print '[info] SNR, %f'%np.mean(output['imgsnr'])
         #print '[info] SFNR, %f'%output['meansfnr']
@@ -94,7 +99,7 @@ def sfnrTest(data,results,params):
             print '[info] nspikes,%d'%len(output['spikes'])
 
     else:
-        print '[warning] Not an fBIRN scan --> do nothing'
+        print '[Warning] Not an fBIRN scan --> do nothing'
 
 
 
