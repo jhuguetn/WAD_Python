@@ -18,7 +18,7 @@ __versionDate__ = '20151016'	  ##
 # TO DO:
 # - ...
 
-__version__ = 20151016
+#__version__ = 20151016
 
 # IMPORT FUNCTIONS
 #import os

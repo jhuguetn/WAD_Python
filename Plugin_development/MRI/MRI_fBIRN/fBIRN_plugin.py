@@ -5,15 +5,15 @@
 ####################################
 __author__      = 'Jordi Huguet'  ##
 __dateCreated__ = '20150820'      ##
-__version__     = '0.1.1'         ##
-__versionDate__ = '20151016'      ##
+__version__     = '0.1.2'         ##
+__versionDate__ = '20151023'      ##
 ####################################
 
 # - MRI fBIRN Quality Control plugin -
 # Initiative for developing a fBIRN-based QC MRI module. Included tests:
 #   - SFNR :: signal-to-fluctuation noise ratio
 
-__version__ = 20151016
+#__version__ = 20151016
 
 # IMPORT FUNCTIONS
 #import os
@@ -50,56 +50,96 @@ def sfnrTest(data,results,params):
 
     #(1) Reads input file(s) list as a series (scan) single DICOM object
     #    returns DICOM header, raw pizelData object scaled and type of current DICOM object { 2D, 3D, ... }
-    dcmInfile,pixeldataIn,dicomMode = wadwrapper_lib.prepareInput(data.series_filelist[0],headers_only=False,logTag=logTag())
+    #dcmInfile,pixeldataIn,dicomMode = wadwrapper_lib.prepareInput(data.series_filelist[0],headers_only=False,logTag=logTag())
 
-    #print 'dcmInfile: %s' %dcmInfile
-    #print 'pixeldataIn shape: %s' %str(pixeldataIn.shape)
-    #print 'dicomMode: %s' %dicomMode
+    #------------------------------------------------------------------
+    pixeldataIn = None
 
-    #(2)
-    seriesDesc = wadwrapper_lib.readDICOMtag("0008,103E",dcmInfile)   # Check Series Description content
-    protocolName = wadwrapper_lib.readDICOMtag("0018,1030",dcmInfile) # Check Protocol Name content
-    manufacturer =  wadwrapper_lib.readDICOMtag("0008,0070",dcmInfile) # Check Manufacturer
+    if len(data.series_filelist[0]) > 1:
+        # read/load a list of DICOM files
+        seriesDataList = pydicom_series.read_files(data.series_filelist[0],showProgress=True, readPixelData=True,skipNonImageFiles=True)
 
-    # Check if is an fBIRN phantom image
-    if 'FBIRN' in seriesDesc.upper() and 'FBIRN' in protocolName.upper() :
-        # Check if is a multiframe image (MRI)
-        if dicomMode not in ["3D","Enhanced"] :
-            raise ValueError("{} Input dataset type not suitable --> 2D dataset or no PixelData found".format(logTag))
+        # check number of series in the array/list
+        if len(seriesDataList) != 1:
+            raise ValueError("{} ToDo --> lets see how to handle this, actually...shall we?".format(logTag))
 
-        nTemporalPositions = ''
-        # Two options and 2 ways of obtaining pixeldata shape: {1} conventional DICOM multi-file scan or (2) enhanced scan file
-        if dicomMode is "3D":
-            nTemporalPositions = wadwrapper_lib.readDICOMtag("0020,0105",dcmInfile)
-        elif dicomMode is "Enhanced" and 'PHILIPS' in manufacturer.upper():
-            # DICOM keeps NumberOfTemporalPositions nested in sequence items/subitems. And DCM4CHEE seems not to keep them at all.
-            # Workaround: Philips Private tag, should be read as a bit string and converted to string/integer/whatever
-            nSlicesRaw = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
+        seriesData = seriesDataList[0]
+
+        nTemporalPositions = int(seriesData.info["0020","0105"].value)
+        #options['seriesDesc'] = seriesData.info["0008","103E"].value
+        #options['protocolName'] = seriesData.info["0018","1030"].value
+
+        # Image pixeldata seems to be transposed when read using wadwrapper_lib methods...
+        pixeldataIn = seriesData.get_pixel_array()
+        pixeldataIn = np.transpose(pixeldataIn)
+
+        #print len(data)
+        #for seriesData in data:
+        #    pixeldataIn = seriesData.get_pixel_array()
+        #    pixeldataIn = np.transpose(pixeldataIn)
+        #    print pixeldataIn.shape
+            #print  seriesData.shape
+            #print  seriesData.description
+            #print  seriesData.info
+
+        #    print seriesData.info["0028","0030"].tag
+        #    print seriesData.info["0028","0030"].VR
+
+
+    elif ( len(data.series_filelist[0]) == 1) and ( wadwrapper_lib.testIfEnhancedDICOM(data.series_filelist[0][0]) ):
+         # read/load a single DICOM file
+        dcmInfile,pixeldataIn,dicomMode = wadwrapper_lib.prepareEnhancedInput(data.series_filelist[0][0],headers_only=False)
+
+        # DICOM keeps NumberOfTemporalPositions nested in sequence items/subitems. And DCM4CHEE seems not to keep them at all (!?).
+        # Workaround: Use Philips private tag, should be read as a bit string and converted to string/integer/whatever
+        if 'PHILIPS' not in (wadwrapper_lib.readDICOMtag("0008,0070",dcmInfile)).upper():
+            raise ValueError("{} Input enhanced dataset type not suitable --> no dynamics/temporal information found".format(logTag))
+
+        nSlicesRaw = wadwrapper_lib.readDICOMtag("2001,1018",dcmInfile)
+        try:
             nSlices = struct.unpack("<L",nSlicesRaw)[0]
+        except:
+            nSlices = nSlicesRaw
+        nTemporalPositions = int(pixeldataIn.shape[0])/int(nSlices)
 
-            nTemporalPositions = int(pixeldataIn.shape[0])/int(nSlices)
+        #options['seriesDesc'] = wadwrapper_lib.readDICOMtag("0008,103E",dcmInfile)   # Check Series Description content
+        #options['protocolName'] = wadwrapper_lib.readDICOMtag("0018,1030",dcmInfile) # Check Protocol Name content
 
-        if nTemporalPositions is '' :
-            raise ValueError("{} Input dataset type not suitable --> no dynamics/temporal positions found".format(logTag))
-        else:
-            transposed_pixeldataIn = pixeldataIn.T
-            new3rdDimension = int(transposed_pixeldataIn.shape[2])/int(nTemporalPositions)
-            reshaped_pixeldataIn = np.reshape(transposed_pixeldataIn, (transposed_pixeldataIn.shape[0],transposed_pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
-
-            output = fBIRN_lib.fBIRN_SFNR(reshaped_pixeldataIn,plot_data=False)
-
-        #(3)
-        results.addFloat('mean_SNR', np.mean(output['imgsnr']), quantity='SNR', level=2) #quantity is actually magnitude in the WAD-QC app
-        results.addFloat('mean_SFNR', output['meansfnr'], quantity='SFNR', level=2) #quantity is actually magnitude in the WAD-QC app
-
-        #print '[info] SNR, %f'%np.mean(output['imgsnr'])
-        #print '[info] SFNR, %f'%output['meansfnr']
-        #print '[info] drift, %f'%output['trend'].params[1]
-        if len(output['spikes']) > 0:
-            print '[info] nspikes,%d'%len(output['spikes'])
+        # Image pixeldata seems to be transposed when read using wadwrapper_lib methods...
+        pixeldataIn = np.transpose(pixeldataIn)
+        new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
+        pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     else:
-        print '[Warning] Not an fBIRN scan --> do nothing'
+        raise ValueError("{} Input dataset type cannot be determined or is not compatible".format(logTag))
+
+    #(2)
+
+    #if 'BIRN' not in options['seriesDesc'] or 'BIRN' not in options['protocolName']:
+    #   raise ValueError("{} Input dataset type not suitable".format(logTag))
+    # OR
+    #   print '[Warning] Not an fBIRN scan --> do nothing'
+
+    #Check if pixeldataIn is actually a numpy array
+    if type(pixeldataIn).__module__ != np.__name__ :
+        raise ValueError("{} Unable to pull out the pixel data of the incomming DICOM file(s)".format(logTag))
+
+    output = fBIRN_lib.fBIRN_SFNR(pixeldataIn,plot_data=False)
+
+    #(3)
+
+    results.addFloat('mean_SNR', np.mean(output['imgsnr']), quantity='SNR', level=2) #quantity is actually magnitude in the WAD-QC app
+    results.addFloat('mean_SFNR', output['meansfnr'], quantity='SFNR', level=2) #quantity is actually magnitude in the WAD-QC app
+
+    #print '[info] SNR, %f'%np.mean(output['imgsnr'])
+    #print '[info] SFNR, %f'%output['meansfnr']
+    #print '[info] drift, %f'%output['trend'].params[1]
+    if len(output['spikes']) > 0:
+        print '[info] nspikes,%d'%len(output['spikes'])
+
+    #------------------------------------------------------------------
+
+
 
 
 
