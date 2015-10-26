@@ -25,6 +25,7 @@ import numpy as np
 #matplotlib.use('Agg')
 #import matplotlib.pyplot as plt
 import fBIRN_lib
+from pyWADLib import pydicom_series
 
 try:
     import wadwrapper_lib
