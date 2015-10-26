@@ -62,30 +62,17 @@ def sfnrTest(data,results,params):
 
         # check number of series in the array/list
         if len(seriesDataList) != 1:
-            raise ValueError("{} ToDo --> lets see how to handle this, actually...shall we?".format(logTag))
+            raise ValueError("{} Such test is supposed to apply solely to a single series/scan. Something went wrong...".format(logTag))
 
         seriesData = seriesDataList[0]
 
         nTemporalPositions = int(seriesData.info["0020","0105"].value)
-        #options['seriesDesc'] = seriesData.info["0008","103E"].value
-        #options['protocolName'] = seriesData.info["0018","1030"].value
 
         # Image pixeldata seems to be transposed when read using wadwrapper_lib methods...
         pixeldataIn = seriesData.get_pixel_array()
         pixeldataIn = np.transpose(pixeldataIn)
-
-        #print len(data)
-        #for seriesData in data:
-        #    pixeldataIn = seriesData.get_pixel_array()
-        #    pixeldataIn = np.transpose(pixeldataIn)
-        #    print pixeldataIn.shape
-            #print  seriesData.shape
-            #print  seriesData.description
-            #print  seriesData.info
-
-        #    print seriesData.info["0028","0030"].tag
-        #    print seriesData.info["0028","0030"].VR
-
+        new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
+        pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     elif ( len(data.series_filelist[0]) == 1) and ( wadwrapper_lib.testIfEnhancedDICOM(data.series_filelist[0][0]) ):
          # read/load a single DICOM file
@@ -102,9 +89,6 @@ def sfnrTest(data,results,params):
         except:
             nSlices = nSlicesRaw
         nTemporalPositions = int(pixeldataIn.shape[0])/int(nSlices)
-
-        #options['seriesDesc'] = wadwrapper_lib.readDICOMtag("0008,103E",dcmInfile)   # Check Series Description content
-        #options['protocolName'] = wadwrapper_lib.readDICOMtag("0018,1030",dcmInfile) # Check Protocol Name content
 
         # Image pixeldata seems to be transposed when read using wadwrapper_lib methods...
         pixeldataIn = np.transpose(pixeldataIn)
@@ -135,8 +119,12 @@ def sfnrTest(data,results,params):
     #print '[info] SNR, %f'%np.mean(output['imgsnr'])
     #print '[info] SFNR, %f'%output['meansfnr']
     #print '[info] drift, %f'%output['trend'].params[1]
+    #if len(output['spikes']) > 0:
+        #print '[info] nspikes,%d'%len(output['spikes'])
     if len(output['spikes']) > 0:
-        print '[info] nspikes,%d'%len(output['spikes'])
+        results.addBool('spikes', True, level=2) #Spikes detected
+    else :
+        results.addChar('spikes', False, level=2) #No spikes detected
 
     #------------------------------------------------------------------
 
