@@ -73,6 +73,7 @@ def sfnrTest(data,results,params):
         pixeldataIn = np.transpose(pixeldataIn)
         new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
         print '[Debug] Image dimensions: ' +  str(pixeldataIn.shape)
+        print '[Debug] New dimensions: (%s, %s, %s, %s)' %(str(pixeldataIn.shape[0]),str(pixeldataIn.shape[1]),str(new3rdDimension),str(nTemporalPositions))
         pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     elif ( len(data.series_filelist[0]) == 1) and ( wadwrapper_lib.testIfEnhancedDICOM(data.series_filelist[0][0]) ):
@@ -95,6 +96,7 @@ def sfnrTest(data,results,params):
         pixeldataIn = np.transpose(pixeldataIn)
         new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
         print '[Debug] Image dimensions: ' + str(pixeldataIn.shape)
+        print '[Debug] New dimensions: (%s, %s, %s, %s)' %(str(pixeldataIn.shape[0]),str(pixeldataIn.shape[1]),str(new3rdDimension),str(nTemporalPositions))
         pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     else:
