@@ -72,6 +72,7 @@ def sfnrTest(data,results,params):
         pixeldataIn = seriesData.get_pixel_array()
         pixeldataIn = np.transpose(pixeldataIn)
         new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
+        print '[debug] Image dimensions: %s' %pixeldataIn.shape
         pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     elif ( len(data.series_filelist[0]) == 1) and ( wadwrapper_lib.testIfEnhancedDICOM(data.series_filelist[0][0]) ):
@@ -93,6 +94,7 @@ def sfnrTest(data,results,params):
         # Image pixeldata seems to be transposed when read using wadwrapper_lib methods...
         pixeldataIn = np.transpose(pixeldataIn)
         new3rdDimension = int(pixeldataIn.shape[2])/nTemporalPositions
+        print '[debug] Image dimensions: %s' %pixeldataIn.shape
         pixeldataIn = np.reshape(pixeldataIn, (pixeldataIn.shape[0],pixeldataIn.shape[1],new3rdDimension,nTemporalPositions))
 
     else:
@@ -124,7 +126,7 @@ def sfnrTest(data,results,params):
     if len(output['spikes']) > 0:
         results.addBool('spikes', True, level=2) #Spikes detected
     else :
-        results.addChar('spikes', False, level=2) #No spikes detected
+        results.addBool('spikes', False, level=2) #No spikes detected
 
     #------------------------------------------------------------------
 
