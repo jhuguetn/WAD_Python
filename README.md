@@ -10,6 +10,6 @@ python Tools/pywad2zip.py zip
 
 and upload the resulting pywadplugin.py.zip file
 
-To test if the package 'works':
-python pywadplugin.py Testing/TestPlugin/input.xml
+To test if the package 'works', the -hello world- example is:
+python pywadplugin.py Testing/PackageTesting/input.xml
 
