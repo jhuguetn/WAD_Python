@@ -5,8 +5,8 @@
 ####################################
 __author__      = 'Jordi Huguet'  ##
 __dateCreated__ = '20150820'      ##
-__version__     = '0.1.2'         ##
-__versionDate__ = '20151023'      ##
+__version__     = '0.1.3'         ##
+__versionDate__ = '20151127'      ##
 ####################################
 
 # - MRI fBIRN Quality Control plugin -
@@ -16,7 +16,7 @@ __versionDate__ = '20151023'      ##
 #__version__ = 20151016
 
 # IMPORT FUNCTIONS
-#import os
+import os
 import struct
 import numpy as np
 #import matplotlib
@@ -56,9 +56,13 @@ def sfnrTest(data,results,params):
     #------------------------------------------------------------------
     pixeldataIn = None
 
-    if len(data.series_filelist[0]) > 1:
+    if ( len(data.series_filelist[0]) > 1 ) or ( len(data.series_filelist[0]) == 1 and os.path.isdir(data.series_filelist[0][0]) ):
+        
+        fileList = data.series_filelist[0]
+        if len(data.series_filelist[0]) == 1 :
+            fileList = data.series_filelist[0][0]
         # read/load a list of DICOM files
-        seriesDataList = pydicom_series.read_files(data.series_filelist[0],showProgress=True, readPixelData=True,skipNonImageFiles=True)
+        seriesDataList = pydicom_series.read_files(fileList,showProgress=True, readPixelData=True,skipNonImageFiles=True)
 
         # check number of series in the array/list
         if len(seriesDataList) != 1:
