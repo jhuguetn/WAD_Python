@@ -81,17 +81,18 @@ def fBIRN_SFNR(imgdata,maskfile=None,verbose=False,plot_data=True):
     if maskfile==None :
         # prior to compute the mask, compute the mean of the whole dynamics to get a single 3D blob
         voxmean=numpy.mean(imgdata,3)
-        # compute thresholding using Li's Minimum Cross Entropy method, get then a mask and a non-mask matrix objects
-        maskThreshold = skimage.filters.threshold_li(voxmean)
-        #maskThreshold = skimage.filters.threshold_otsu(voxmean)
+        # compute thresholding using Otsu method, get then a mask and a non-mask matrix objects
+        maskThreshold = skimage.filters.threshold_otsu(voxmean)
         maskdata=numpy.where(voxmean>maskThreshold, 1, 0)
         nonmaskdata=numpy.where(voxmean>maskThreshold, 0, 1)
         # remove black wholes
-        structElem = skimage.morphology.ball(2)
-        maskdata=skimage.morphology.closing(maskdata, structElem)
+        #structElem = skimage.morphology.ball(2)
+        #maskdata=skimage.morphology.closing(maskdata, structElem)
         #maskdata=skimage.morphology.erosion(maskdata, skimage.morphology.ball(1))
-        nonmaskdata=skimage.morphology.closing(nonmaskdata, structElem)
-        #maskdata=skimage.morphology.dilate(maskdata, structElem)
+        #nonmaskdata=skimage.morphology.closing(nonmaskdata, structElem)
+        #nonmaskdata=skimage.morphology.dilate(nonmaskdata, structElem)
+        maskdata=skimage.morphology.closing(maskdata)
+        nonmaskdata=skimage.morphology.closing(nonmaskdata)
         
         maskvox=numpy.where(maskdata>0)
         nonmaskvox=numpy.where(maskdata==0)
